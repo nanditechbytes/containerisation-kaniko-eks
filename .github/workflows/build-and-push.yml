@@ -1,0 +1,59 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.27.2'  # Adjust to your EKS version
+
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name sandbox-eks
+
+      - name: Deploy Kaniko Job
+        run: |
+          kubectl apply -f kaniko-job.yaml
+
+      - name: Wait for Kaniko Job to Complete
+        run: |
+          kubectl wait --for=condition=complete job/kaniko-build --timeout=30m || exit 1
+
+      # Check if the Kaniko job succeeded or failed
+      - name: Check Kaniko Job Status
+        run: |
+          JOB_STATUS=$(kubectl get job kaniko-build -o jsonpath='{.status.succeeded}')
+          if [ "$JOB_STATUS" != "1" ]; then
+            echo "Kaniko Job failed!"
+            kubectl logs $(kubectl get pods --selector=job-name=kaniko-build --output=jsonpath='{.items[0].metadata.name}')
+            exit 1
+          fi
+
+      # Fetch Kaniko Build Logs
+      - name: Fetch Kaniko Build Logs
+        run: |
+          POD_NAME=$(kubectl get pods --selector=job-name=kaniko-build --output=jsonpath='{.items[0].metadata.name}')
+          kubectl logs $POD_NAME   
+
+      - name: Clean up Kaniko Job
+        run: |
+          kubectl delete job kaniko-build
