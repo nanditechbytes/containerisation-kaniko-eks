@@ -57,15 +57,7 @@ jobs:
       # Fetch Kaniko Build Logs (only if the job succeeds)
       - name: Fetch Kaniko Build Logs and Check for Errors
         run: |
-          POD_NAME=$(kubectl get pods --selector=job-name=kaniko-build --output=jsonpath='{.items[0].metadata.name}')
-          LOGS=$(kubectl logs $POD_NAME)
-          echo "$LOGS"
-          if echo "$LOGS" | grep -i "error"; then
-             echo "Error found in Kaniko build logs."
-             exit 1
-          else
-             echo "No errors found in Kaniko build logs."
-          fi
+          ./script.sh
 
 
       # - name: Clean up Kaniko Job
