@@ -14,7 +14,7 @@ spec:
           image: alpine/git:latest
           command: ["sh", "-c"]
           args:
-            - git clone https://github.com/nanditechbytes/dotnet-containerization.git /workspace/containerisation-kaniko-eks
+            - git clone https://github.com/nanditechbytes/containerisation-kaniko-eks.git /workspace/containerisation-kaniko-eks
           volumeMounts:
             - name: workspace
               mountPath: /workspace
@@ -24,7 +24,7 @@ spec:
           args:
             - --context=dir:///workspace/containerisation-kaniko-eks
             - --dockerfile=/workspace/containerisation-kaniko-eks/Dockerfile
-            - --destination=devops091/dotnet-app:helloworld
+            - --destination=devops091/dotnet-app:v1
             - --cache=true
           volumeMounts:
             - name: workspace
