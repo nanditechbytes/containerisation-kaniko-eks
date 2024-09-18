@@ -68,6 +68,6 @@ jobs:
           fi
 
 
-      - name: Clean up Kaniko Job
-        run: |
-          kubectl delete job kaniko-build
+      # - name: Clean up Kaniko Job
+      #   run: |
+      #     kubectl delete job kaniko-build
