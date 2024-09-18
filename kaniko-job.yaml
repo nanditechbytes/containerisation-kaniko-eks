@@ -39,7 +39,7 @@ spec:
           projected:
             sources:
               - secret:
-                  name: dockerhub-creds
+                  name: regcred
                   items:
                     - key: .dockerconfigjson
                       path: config.json  # The key should match the Docker secret key
