@@ -34,25 +34,27 @@ jobs:
         run: |
           kubectl apply -f kaniko-job.yaml
 
-      - name: Wait for Kaniko Job to Complete
+      - name: Check Kaniko Pod Status and Handle Errors
         run: |
-          kubectl wait --for=condition=complete job/kaniko-build --timeout=30m || exit 1
-
-      # Check if the Kaniko job succeeded or failed
-      - name: Check Kaniko Job Status
-        run: |
-          JOB_STATUS=$(kubectl get job kaniko-build -o jsonpath='{.status.succeeded}')
-          if [ "$JOB_STATUS" != "1" ]; then
-            echo "Kaniko Job failed!"
-            kubectl logs $(kubectl get pods --selector=job-name=kaniko-build --output=jsonpath='{.items[0].metadata.name}')
+          POD_NAME=$(kubectl get pods --selector=job-name=kaniko-build --output=jsonpath='{.items[0].metadata.name}')
+          POD_STATUS=$(kubectl get pod $POD_NAME --output=jsonpath='{.status.phase}')
+          
+          if [ "$POD_STATUS" == "Failed" ] || [ "$POD_STATUS" == "CrashLoopBackOff" ]; then
+            echo "Kaniko Pod is in error state: $POD_STATUS"
+            echo "Fetching logs before killing the job..."
+            kubectl logs $POD_NAME
+            echo "Killing the Kaniko job due to pod failure..."
+            kubectl delete job kaniko-build
             exit 1
+          else
+            echo "Kaniko Pod is running successfully: $POD_STATUS"
           fi
 
-      # Fetch Kaniko Build Logs
+      # Fetch Kaniko Build Logs (only if the job succeeds)
       - name: Fetch Kaniko Build Logs
         run: |
           POD_NAME=$(kubectl get pods --selector=job-name=kaniko-build --output=jsonpath='{.items[0].metadata.name}')
-          kubectl logs $POD_NAME   
+          kubectl logs $POD_NAME
 
       - name: Clean up Kaniko Job
         run: |
